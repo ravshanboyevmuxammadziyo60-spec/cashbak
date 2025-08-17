@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cashback Ultra DEMO — QR kamera bilan (Soxta)</title>
+  <!-- QR kamera skan kutubxonasi -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    /* ======= Dizayn (Glass + Neo) ======= */
+    :root{
+      --bg:#050814;
+      --surface:#0a1024;
+      --glass:rgba(255,255,255,0.06);
+      --border:#26324a;
+      --text:#eaf2ff;
+      --muted:#a8b3c7;
+      --brand:#22c55e;
+      --brand-2:#14b8a6;
+      --danger:#ef4444;
+      --warn:#f59e0b;
+      --ok:#86efac;
+      --shadow:0 20px 60px rgba(0,0,0,.45);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:
+        radial-gradient(1200px 600px at 120% -10%, #1b2740 10%, transparent 60%),
+        radial-gradient(1000px 500px at -20% -20%, #0f1a36 20%, transparent 60%),
+        linear-gradient(180deg, #070d1a, var(--bg));
+    }
+    .container{max-width:1200px; margin:24px auto; padding:0 16px}
+
+    /* Header */
+    header{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px}
+    .logo{display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:.3px}
+    .logo .mark{width:34px; height:34px; border-radius:10px; background:
+      conic-gradient(from 40deg, #22c55e, #14b8a6, #60a5fa, #22c55e);
+      box-shadow:0 8px 24px rgba(34,197,94,.35);
+    }
+    .hdr-actions{display:flex; align-items:center; gap:8px}
+    .badge{border:1px dashed var(--border); background:var(--glass); padding:6px 10px; border-radius:999px; color:#bbf7d0}
+
+    /* Layout */
+    .grid{display:grid; grid-template-columns:1.1fr .9fr; gap:16px}
+    @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
+
+    /* Cards */
+    .card{position:relative; background:linear-gradient(180deg, rgba(32,40,74,.45), rgba(12,18,36,.45));
+      border:1px solid var(--border); border-radius:20px; padding:18px; backdrop-filter: blur(8px); box-shadow: var(--shadow)}
+    .card h2{margin:8px 0 12px; font-size:18px}
+    .desc{font-size:12px; color:var(--muted)}
+
+    /* Inputs */
+    label{display:block; font-size:12px; color:var(--muted); margin:10px 0 6px}
+    input, select{
+      width:100%; padding:12px 12px; border-radius:14px; background:rgba(3,7,18,.5); color:var(--text);
+      border:1px solid var(--border); outline:none; transition:.2s
+    }
+    input:focus,select:focus{border-color:#3b4b71; box-shadow:0 0 0 6px rgba(59,75,113,.25)}
+    .row{display:flex; gap:10px}
+    .row>*{flex:1}
+
+    .btn{border:0; padding:12px 14px; border-radius:14px; font-weight:800; cursor:pointer; transition:.2s transform; letter-spacing:.3px}
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{background:linear-gradient(90deg, var(--brand), var(--brand-2)); color:#04110a}
+    .btn-muted{background: rgba(255,255,255,.06); color:var(--text); border:1px solid var(--border)}
+    .btn-danger{background: var(--danger); color:white}
+    .btn-warn{background: var(--warn); color:#3a2200}
+
+    .hr{height:1px; background:linear-gradient(90deg, transparent, #22304b, transparent); margin:14px 0}
+    .status{font-size:12px; margin-top:8px}
+    .ok{color:var(--ok)}
+    .err{color:#fca5a5}
+
+    /* Wallet */
+    .balance{font-size:40px; font-weight:900; margin:4px 0}
+    .tag{font-size:12px; color:#bbf7d0; background:#052e16; border:1px solid #14532d; padding:4px 8px; border-radius:999px}
+
+    .tx-list{display:flex; flex-direction:column; gap:8px; max-height:380px; overflow:auto}
+    .tx-item{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border-radius:14px; border:1px solid var(--border); background:rgba(7,13,26,.55)}
+    .tx-item small{color:var(--muted)}
+
+    /* Spinner overlay */
+    .overlay{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(5,8,20,.7); z-index:60}
+    .sp-wrap{display:flex; flex-direction:column; align-items:center; gap:10px}
+    .spinner{width:84px; height:84px; border:7px solid rgba(255,255,255,.08); border-top-color:#22c55e; border-radius:50%; animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Toast */
+    .toast{position:fixed; left:50%; top:16px; transform:translateX(-50%); background:rgba(14,22,42,.9); border:1px solid var(--border); border-radius:999px; padding:10px 14px; z-index:70; box-shadow: var(--shadow)}
+
+    /* QR area */
+    #reader{ width:100%; max-width:420px; margin:8px auto; border-radius:16px; overflow:hidden; border:1px solid var(--border); background:#000 }
+    .qr-actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:center}
+
+    /* Footer note */
+    .foot{margin:18px auto 10px; text-align:center; color:var(--muted); font-size:12px}
+
+    /* Confetti (canvas) */
+    #confetti{position:fixed; inset:0; pointer-events:none; z-index:55}
+  </style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+  <div class="overlay" id="overlay">
+    <div class="sp-wrap">
+      <div class="spinner" aria-label="loading"></div>
+      <div style="font-weight:900">Pul tushmoqda…</div>
+      <div class="desc">Internet bo‘lmasa ham demo ishlaydi</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="logo"><div class="mark"></div> <div>Cashback <span style="color:#bbf7d0">ULTRA DEMO</span></div></div>
+      <div class="hdr-actions">
+        <div class="badge">TEST-ONLY • Real to‘lov YO‘Q • O‘rganish uchun</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Left: auth + simulate payment -->
+      <section class="card">
+        <h2>1) Soxta ro‘yxatdan o‘tish (OTP demo)</h2>
+        <div class="row">
+          <div>
+            <label>Ism</label>
+            <input id="name" placeholder="Otabek" />
+          </div>
+          <div>
+            <label>Telefon (test)</label>
+            <input id="phone" placeholder="+998901234567" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn btn-muted" id="sendOtp">OTP yuborish</button>
+          <input id="otp" placeholder="OTP kod" maxlength="6" />
+          <button class="btn btn-primary" id="verifyOtp">Tasdiqlash</button>
+        </div>
+        <div class="status" id="authStatus"></div>
+        <div class="hr"></div>
+
+        <h2>2) To‘lov simulyatsiyasi</h2>
+        <div class="row">
+          <input id="payAmount" type="number" min="0" step="1000" placeholder="Xarid summasi (so‘m)" />
+          <select id="rate">
+            <option value="1">1% cashback</option>
+            <option value="3">3% cashback</option>
+            <option value="5">5% cashback</option>
+            <option value="10" selected>10% cashback</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn btn-warn" id="simulatePay">Pul tushmoqda…</button>
+          <button class="btn btn-danger" id="reset">Tozalash</button>
+        </div>
+        <div class="desc">Tugmani bossangiz spinner chiqadi, so‘ng “Pul tushdi” va cashback hamyonga qo‘shiladi.</div>
+      </section>
+
+      <!-- Right: wallet + QR -->
+      <section class="card">
+        <h2>Hamyon</h2>
+        <div class="balance" id="balance">0 so‘m</div>
+        <div style="display:flex; align-items:center; gap:8px"><span class="tag" id="authTag">Mehmon</span>
+          <span class="desc">Har QR skan uchun +500 so‘m (demo)</span></div>
+        <div class="hr"></div>
+
+        <div>
+          <h2 style="margin-top:0">QR kamera</h2>
+          <div class="qr-actions">
+            <button class="btn btn-primary" id="startScan">📷 Skan boshlash</button>
+            <button class="btn btn-muted" id="stopScan">✋ To‘xtatish</button>
+            <button class="btn btn-muted" id="flipCam">🔁 Kamera almashtirish</button>
+          </div>
+          <div id="reader"></div>
+          <div class="status" id="scanStatus"></div>
+        </div>
+
+        <div class="hr"></div>
+        <h3 style="margin:0 0 10px">Tranzaksiyalar</h3>
+        <div class="tx-list" id="txList"></div>
+      </section>
+    </div>
+
+    <div class="foot">⚠️ Bu sahifa ta’limiy/DEMO. Haqiqiy SMS/to‘lov yo‘q. Barcha ma’lumotlar faqat brauzer <code>localStorage</code> da.</div>
+  </div>
+
+  <script>
+    // ======= Util & State =======
+    const $ = (id) => document.getElementById(id);
+    const fmt = new Intl.NumberFormat('uz-UZ', { style:'currency', currency:'UZS', maximumFractionDigits:0 });
+    const state = load('ultra_demo_v1', { authed:false, name:null, phone:null, balance:0, tx:[], cameraId:null });
+    function save(k,v){ localStorage.setItem(k, JSON.stringify(v)) }
+    function load(k,def){ try{ return JSON.parse(localStorage.getItem(k)) ?? def }catch{ return def } }
+    function persist(){ save('ultra_demo_v1', state) }
+
+    // ======= Confetti (lightweight) =======
+    const cf = (function(){
+      const canvas = $('confetti'); const ctx = canvas.getContext('2d');
+      let W=0,H=0, parts=[]; function size(){ W=canvas.width=innerWidth; H=canvas.height=innerHeight }
+      function spawn(n=120){
+        for(let i=0;i<n;i++) parts.push({ x:Math.random()*W, y:-10, r:2+Math.random()*4, vy:2+Math.random()*3, vx:(Math.random()-.5)*2, a:Math.random()*360 })
+        loop(1200)
+      }
+      let raf=null, until=0; function loop(ms){ until=performance.now()+ms; if(raf) return; const tick=()=>{ const now=performance.now(); ctx.clearRect(0,0,W,H); parts.forEach(p=>{ p.y+=p.vy; p.x+=p.vx; p.a+=8; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a*Math.PI/180); ctx.fillStyle = ['#22c55e','#14b8a6','#60a5fa','#f59e0b'][p.a%4|0]; ctx.fillRect(-p.r,-p.r,p.r*2,p.r*2); ctx.restore(); }); parts = parts.filter(p=>p.y<H+20); if(now<until || parts.length){ raf=requestAnimationFrame(tick) } else { cancelAnimationFrame(raf); raf=null } }; raf=requestAnimationFrame(tick) }
+      addEventListener('resize', size); size();
+      return { spawn };
+    })();
+
+    // ======= OTP Demo =======
+    let currentOtp=null;
+    $('sendOtp').addEventListener('click', ()=>{
+      const phone=$('phone').value.trim(); const name=$('name').value.trim();
+      if(!name){ setStatus('authStatus','Ism kiriting','err'); return }
+      if(!/^\+?\d{7,15}$/.test(phone)){ setStatus('authStatus','Telefon formati noto‘g‘ri','err'); return }
+      currentOtp = String(Math.floor(100000 + Math.random()*900000));
+      setStatus('authStatus', `DEMO OTP: <span class="tag">${currentOtp}</span>`, 'ok');
+    });
+    $('verifyOtp').addEventListener('click', ()=>{
+      if(!$('otp').value.trim()) { setStatus('authStatus','Kod kiriting','err'); return }
+      if($('otp').value.trim()===currentOtp){ state.authed=true; state.name=$('name').value.trim(); state.phone=$('phone').value.trim(); setStatus('authStatus','Tasdiqlandi ✔︎','ok'); refresh(); persist(); toast('Xush kelibsiz, '+(state.name||'foydalanuvchi')+'!') } else setStatus('authStatus','Kod noto‘g‘ri','err');
+    });
+
+    // ======= Payment Simulation =======
+    $('simulatePay').addEventListener('click', ()=>{
+      const amt = parseFloat(($('payAmount').value||'0')); const rate=parseFloat($('rate').value||'0');
+      if(!(amt>0)){ toast('Summani kiriting'); return }
+      overlay(true);
+      setTimeout(()=>{
+        const cb = Math.floor(amt*rate/100);
+        addTx(`To‘lov: ${fmt.format(amt)} @ ${rate}%`, cb);
+        overlay(false); toast('Pul tushdi! +' + fmt.format(cb)); cf.spawn();
+      }, 1600);
+    });
+
+    // ======= Wallet/Tx =======
+    function addTx(title, amount){ state.balance += amount; state.tx.push({ title, cb:amount, ts:Date.now() }); persist(); refresh() }
+    function refresh(){ $('balance').textContent = fmt.format(state.balance); $('authTag').textContent = state.authed ? `Tasdiqlangan: ${state.name||''}` : 'Mehmon'; const list=$('txList'); list.innerHTML=''; if(!state.tx.length){ const d=document.createElement('div'); d.className='tx-item'; d.innerHTML='<small>Hozircha tranzaksiya yo‘q</small>'; list.appendChild(d); return } state.tx.slice().reverse().forEach(t=>{ const d=document.createElement('div'); d.className='tx-item'; d.innerHTML=`<div><div><strong>${t.title}</strong></div><small>${new Date(t.ts).toLocaleString()}</small></div><div><strong>+${fmt.format(t.cb)}</strong></div>`; list.appendChild(d); }); }
+
+    // ======= Overlay & Toast =======
+    function overlay(v){ $('overlay').style.display = v?'flex':'none' }
+    function setStatus(id, html, type){ $(id).innerHTML = `<span class="${type}">${html}</span>` }
+    function toast(msg){ const el=document.createElement('div'); el.className='toast'; el.textContent=msg; document.body.appendChild(el); setTimeout(()=>el.remove(),1600) }
+
+    // ======= QR Camera Scan =======
+    let html5QrCode = null; let currentCameraId = null; let cameras = [];
+    async function ensureCameras(){
+      try{
+        const devices = await Html5Qrcode.getCameras();
+        cameras = devices || [];
+        if(!cameras.length){ setStatus('scanStatus','Kamera topilmadi','err'); return false }
+        if(!currentCameraId){ currentCameraId = state.cameraId || (cameras.find(d=>/back|rear|environment/i.test(d.label))?.id || cameras[0].id); }
+        return true;
+      }catch(e){ setStatus('scanStatus','Kamera ruxsati kerak','err'); return false }
+    }
+
+    async function startScan(){
+      if(!(await ensureCameras())) return;
+      if(html5QrCode){ await stopScan() }
+      html5QrCode = new Html5Qrcode('reader', { formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ] });
+      const config = { fps:10, qrbox: { width: 280, height: 280 } };
+      try{
+        await html5QrCode.start({ deviceId: { exact: currentCameraId } }, config,
+          qrCodeMessage => {
+            // Anti-dup: har noyob QR uchun +500 so'm, bir xil kod 1 marta
+            const key = 'scanned_'+qrCodeMessage;
+            if(localStorage.getItem(key)) { toast('Bu QR allaqachon olindi'); return }
+            localStorage.setItem(key, '1');
+            addTx(`QR skan: ${qrCodeMessage}`, 500);
+            toast('+500 so‘m qo‘shildi'); cf.spawn();
+          },
+          err => { /* skan jarayoni davomida xatolar log */ }
+        );
+        state.cameraId = currentCameraId; persist();
+        setStatus('scanStatus', `Skaner ishlamoqda: ${cameras.find(c=>c.id===currentCameraId)?.label||'kamera'}`, 'ok');
+      }catch(e){ setStatus('scanStatus','Skan boshlanmadi: '+e, 'err') }
+    }
+
+    async function stopScan(){
+      try{ if(html5QrCode){ await html5QrCode.stop(); await html5QrCode.clear(); html5QrCode=null; setStatus('scanStatus','Skan to‘xtadi','ok') } }
+      catch(e){ setStatus('scanStatus','To‘xtatishda xato: '+e, 'err') }
+    }
+
+    async function flipCamera(){
+      if(!(await ensureCameras())) return;
+      if(!cameras.length) return;
+      const idx = cameras.findIndex(c=>c.id===currentCameraId);
+      const next = cameras[(idx+1) % cameras.length];
+      currentCameraId = next.id; state.cameraId = currentCameraId; persist();
+      setStatus('scanStatus','Kamera almashtirildi', 'ok');
+      if(html5QrCode) { await startScan() }
+    }
+
+    $('startScan').addEventListener('click', startScan);
+    $('stopScan').addEventListener('click', stopScan);
+    $('flipCam').addEventListener('click', flipCamera);
+
+    // ======= Reset =======
+    $('reset').addEventListener('click', ()=>{
+      if(!confirm('Hammasini tozalaymizmi?')) return;
+      // demo holatni tozalash
+      for(let k in localStorage){ if(k && typeof k==='string' && k.startsWith('scanned_')) try{ localStorage.removeItem(k) }catch(_){} }
+      localStorage.removeItem('ultra_demo_v1');
+      state.authed=false; state.name=null; state.phone=null; state.balance=0; state.tx=[]; persist(); refresh(); $('authStatus').innerHTML=''; $('payAmount').value='';
+      stopScan();
+      toast('Tozalandi');
+    });
+
+    // ======= Init =======
+    refresh();
+  </script>
+</body>
+</html>
